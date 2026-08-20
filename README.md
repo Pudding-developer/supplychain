@@ -22,21 +22,15 @@ ChainPulse Graph runs out of the box with **Zero-Config Demo Fallback Mode** (no
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 
-# Windows (Command Prompt):
-# venv\Scripts\activate.bat
-
-# macOS / Linux:
-# python3 -m venv venv && source venv/bin/activate
 
 # 2. Install backend dependencies
 pip install -r backend/requirements.txt
 
 # 3. Start the FastAPI API server (port 8000)
-# From the project root:
-uvicorn app.main:app --app-dir backend --reload --port 8000
+cd backend
+uvicorn app.main:app --reload --port 8000
 
-# OR from inside the backend directory:
-# cd backend && uvicorn app.main:app --reload --port 8000
+
 ```
 
 > 💡 **No credentials needed to test immediately**: The backend will automatically boot in *Offline Fallback Mode* with the full multi-tier supply chain graph dataset loaded in memory.

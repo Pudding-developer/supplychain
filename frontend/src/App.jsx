@@ -6,7 +6,6 @@ import SPOFRadar from './components/SPOFRadar';
 import NodeDrawer from './components/NodeDrawer';
 import CypherModal from './components/CypherModal';
 import ProductBOMModal from './components/ProductBOMModal';
-import LoadingScreen from './components/LoadingScreen';
 import { checkHealth, fetchGraph, simulateDisruption, fetchSPOFs } from './services/api';
 
 export default function App() {
@@ -14,7 +13,7 @@ export default function App() {
   const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [spofData, setSpofData] = useState(null);
   const [activeTab, setActiveTab] = useState('DISRUPTION'); // 'DISRUPTION' | 'SPOF'
-  
+
   // Disruption Simulation state
   const [disruptedNodeIds, setDisruptedNodeIds] = useState([]);
   const [simulationResult, setSimulationResult] = useState(null);
@@ -66,12 +65,9 @@ export default function App() {
 
   const revenueAtRisk = simulationResult?.total_daily_revenue_at_risk_usd || 0;
   const affectedNodeIds = simulationResult?.affected_node_ids || [];
-  const isAppReady = Boolean(graphData.nodes?.length > 0 && health !== null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      {/* Smooth Loading Screen */}
-      <LoadingScreen isLoaded={isAppReady} />
       {/* Streamlined Top Navigation with Integrated Telemetry Metrics */}
       <Navbar
         health={health}
@@ -107,7 +103,7 @@ export default function App() {
                 className={`segmented-button ${activeTab === 'DISRUPTION' ? 'active' : ''}`}
                 onClick={() => setActiveTab('DISRUPTION')}
               >
-                Disruption Lab
+                Disruption
               </button>
               <button
                 className={`segmented-button ${activeTab === 'SPOF' ? 'active' : ''}`}

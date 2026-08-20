@@ -6,6 +6,7 @@ import SPOFRadar from './components/SPOFRadar';
 import NodeDrawer from './components/NodeDrawer';
 import CypherModal from './components/CypherModal';
 import ProductBOMModal from './components/ProductBOMModal';
+import LoadingScreen from './components/LoadingScreen';
 import { checkHealth, fetchGraph, simulateDisruption, fetchSPOFs } from './services/api';
 
 export default function App() {
@@ -65,9 +66,12 @@ export default function App() {
 
   const revenueAtRisk = simulationResult?.total_daily_revenue_at_risk_usd || 0;
   const affectedNodeIds = simulationResult?.affected_node_ids || [];
+  const isAppReady = Boolean(graphData.nodes?.length > 0 && health !== null);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      {/* Smooth Loading Screen */}
+      <LoadingScreen isLoaded={isAppReady} />
       {/* Streamlined Top Navigation with Integrated Telemetry Metrics */}
       <Navbar
         health={health}

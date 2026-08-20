@@ -95,6 +95,24 @@ export default function NodeDrawer({
             Entity Attributes
           </div>
 
+          {node.geopolitical_risk_score !== undefined && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Geopolitical Risk</span>
+              <span style={{ color: 'var(--accent-amber)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+                {(node.geopolitical_risk_score * 100).toFixed(0)}%
+              </span>
+            </div>
+          )}
+
+          {node.climate_risk_score !== undefined && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Climate Vulnerability</span>
+              <span style={{ color: '#ef4444', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+                {(node.climate_risk_score * 100).toFixed(0)}%
+              </span>
+            </div>
+          )}
+
           {node.country && (
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.76rem' }}>
               <span style={{ color: 'var(--text-muted)' }}>Location / Origin</span>

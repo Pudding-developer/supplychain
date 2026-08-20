@@ -144,6 +144,23 @@ MOCK_LINKS = [
     {"source": "fac_4", "target": "reg_2", "type": "LOCATED_IN"},
     {"source": "fac_4", "target": "port_3", "type": "SHIPS_VIA", "transit_days": 1},
 
+    # Regional Geographies (Ports & Suppliers LOCATED_IN Regions)
+    {"source": "port_4", "target": "reg_3", "type": "LOCATED_IN"},
+    {"source": "sup_11", "target": "reg_3", "type": "LOCATED_IN"},
+    {"source": "sup_17", "target": "reg_3", "type": "LOCATED_IN"},
+    {"source": "sup_alt_1", "target": "reg_3", "type": "LOCATED_IN"},
+    {"source": "sup_alt_2", "target": "reg_3", "type": "LOCATED_IN"},
+
+    {"source": "port_1", "target": "reg_1", "type": "LOCATED_IN"},
+    {"source": "port_2", "target": "reg_1", "type": "LOCATED_IN"},
+    {"source": "sup_6", "target": "reg_1", "type": "LOCATED_IN"},
+    {"source": "sup_8", "target": "reg_1", "type": "LOCATED_IN"},
+    {"source": "sup_9", "target": "reg_1", "type": "LOCATED_IN"},
+
+    {"source": "port_3", "target": "reg_2", "type": "LOCATED_IN"},
+    {"source": "sup_1", "target": "reg_2", "type": "LOCATED_IN"},
+    {"source": "sup_3", "target": "reg_2", "type": "LOCATED_IN"},
+
     # Shipping Routes
     {"source": "port_1", "target": "port_3", "type": "ROUTES_TO", "transit_days": 12},
     {"source": "port_2", "target": "port_3", "type": "ROUTES_TO", "transit_days": 18},

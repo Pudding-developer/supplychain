@@ -3,7 +3,9 @@
  * Interacts with FastAPI backend endpoints.
  */
 
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL 
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api` 
+  : '/api';
 
 export async function checkHealth() {
   try {

@@ -176,7 +176,8 @@
 .badge-component { background: var(--accent-blue-subtle); color: var(--accent-blue); }
 .badge-supplier { background: var(--accent-purple-subtle); color: var(--accent-purple); }
 .badge-facility { background: var(--accent-amber-subtle); color: var(--accent-amber); }
-.badge-hub { background: var(--accent-green-subtle); color: var(--accent-green); }
+.badge-hub, .badge-logisticshub { background: var(--accent-green-subtle); color: var(--accent-green); }
+.badge-region { background: rgba(244, 114, 182, 0.15); color: #f472b6; }
 .badge-critical { background: var(--accent-red-subtle); color: var(--accent-red); font-weight: 600; }
 .badge-high { background: var(--accent-amber-subtle); color: var(--accent-amber); }
 

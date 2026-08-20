@@ -85,6 +85,38 @@ export default function GraphCanvas({
     };
   }, [graphData, filterLabel, searchQuery]);
 
+  // Compute 1-hop connected neighbors for the selected node
+  const connectedNodeIds = useMemo(() => {
+    if (!selectedNode) return null;
+    const ids = new Set([selectedNode.id]);
+    (graphData.links || []).forEach(l => {
+      const srcId = typeof l.source === 'object' ? l.source.id : l.source;
+      const tgtId = typeof l.target === 'object' ? l.target.id : l.target;
+      if (srcId === selectedNode.id) ids.add(tgtId);
+      if (tgtId === selectedNode.id) ids.add(srcId);
+    });
+    return ids;
+  }, [selectedNode, graphData.links]);
+
+  // Keep live references to dynamic state for force-graph canvas callbacks
+  const stateRef = useRef({
+    disruptedSet,
+    affectedSet,
+    selectedNode,
+    hoverNode,
+    onSelectNode,
+    connectedNodeIds
+  });
+
+  stateRef.current = {
+    disruptedSet,
+    affectedSet,
+    selectedNode,
+    hoverNode,
+    onSelectNode,
+    connectedNodeIds
+  };
+
   // Initialize Force Graph instance
   useEffect(() => {
     if (!containerRef.current) return;
@@ -97,49 +129,82 @@ export default function GraphCanvas({
       .height(height)
       .backgroundColor('#1a1c23')
       .nodeId('id')
+      .nodeLabel(() => '')
+      .linkLabel(() => '')
+      .autoPauseRedraw(false)
       .nodeVal(node => (node.label === 'Product' ? 14 : node.label === 'Supplier' ? 10 : 8))
       .nodeRelSize(1)
       .linkSource('source')
       .linkTarget('target')
       .linkColor(link => {
+        const { disruptedSet: dSet, affectedSet: aSet, selectedNode: sNode } = stateRef.current;
         const srcId = typeof link.source === 'object' ? link.source.id : link.source;
         const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
-        if (disruptedSet.has(srcId) || (affectedSet.has(srcId) && affectedSet.has(tgtId))) {
+        const isDisruptedLink = dSet.has(srcId) || (aSet.has(srcId) && aSet.has(tgtId));
+
+        if (sNode) {
+          const isConnected = srcId === sNode.id || tgtId === sNode.id;
+          if (isConnected) {
+            return isDisruptedLink ? 'rgba(239, 68, 68, 1)' : '#38bdf8';
+          }
+          return 'rgba(100, 116, 139, 0.08)'; // Dim unrelated links
+        }
+
+        if (isDisruptedLink) {
           return 'rgba(239, 68, 68, 0.9)';
         }
         return 'rgba(203, 213, 225, 0.35)';
       })
       .linkWidth(link => {
+        const { disruptedSet: dSet, affectedSet: aSet, selectedNode: sNode } = stateRef.current;
         const srcId = typeof link.source === 'object' ? link.source.id : link.source;
         const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
-        if (disruptedSet.has(srcId) || (affectedSet.has(srcId) && affectedSet.has(tgtId))) {
+        if (sNode && (srcId === sNode.id || tgtId === sNode.id)) {
+          return 3.0; // Highlight connected edges
+        }
+        if (dSet.has(srcId) || (aSet.has(srcId) && aSet.has(tgtId))) {
           return 2.4;
         }
         return 1.4;
       })
       .linkDirectionalParticles(link => {
+        const { disruptedSet: dSet, affectedSet: aSet, selectedNode: sNode } = stateRef.current;
         const srcId = typeof link.source === 'object' ? link.source.id : link.source;
         const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
-        if (disruptedSet.has(srcId) || (affectedSet.has(srcId) && affectedSet.has(tgtId))) {
+        if (sNode && (srcId === sNode.id || tgtId === sNode.id)) {
+          return 3;
+        }
+        if (dSet.has(srcId) || (aSet.has(srcId) && aSet.has(tgtId))) {
           return 4;
         }
         return 1;
       })
       .linkDirectionalParticleSpeed(0.008)
       .linkDirectionalParticleColor(link => {
+        const { disruptedSet: dSet, selectedNode: sNode } = stateRef.current;
         const srcId = typeof link.source === 'object' ? link.source.id : link.source;
-        return disruptedSet.has(srcId) ? '#ef4444' : '#60a5fa';
+        const tgtId = typeof link.target === 'object' ? link.target.id : link.target;
+        if (sNode && (srcId === sNode.id || tgtId === sNode.id)) {
+          return '#38bdf8';
+        }
+        return dSet.has(srcId) ? '#ef4444' : '#60a5fa';
       })
       .linkDirectionalParticleWidth(2.2)
       .linkDirectionalArrowLength(4.5)
       .linkDirectionalArrowRelPos(0.96)
       .nodeCanvasObject((node, ctx, globalScale) => {
-        const isDisrupted = disruptedSet.has(node.id);
-        const isAffected = affectedSet.has(node.id);
-        const isSelected = selectedNode?.id === node.id;
-        const isHovered = hoverNode?.id === node.id;
+        const { disruptedSet: dSet, affectedSet: aSet, selectedNode: sNode, hoverNode: hNode, connectedNodeIds: cIds } = stateRef.current;
+        const isDisrupted = dSet.has(node.id);
+        const isAffected = aSet.has(node.id);
+        const isSelected = sNode?.id === node.id;
+        const isHovered = hNode?.id === node.id;
+        const isConnectedNeighbor = cIds ? cIds.has(node.id) : true;
 
-        const baseRadius = node.label === 'Product' ? 7.5 : node.label === 'Supplier' ? 6 : 5;
+        // Apply focus dimming for unrelated nodes
+        const alpha = isConnectedNeighbor ? 1.0 : 0.18;
+        ctx.globalAlpha = alpha;
+
+        const baseRadius = node.label === 'Product' ? 7.5 : node.label === 'Supplier' ? 6 : node.label === 'Region' ? 6.5 : 5;
         const r = isSelected || isHovered ? baseRadius * 1.35 : baseRadius;
         
         let color = NODE_PALETTE[node.label] || '#94a3b8';
@@ -154,12 +219,18 @@ export default function GraphCanvas({
           ctx.fill();
         }
 
-        // Selected Outer Ring
+        // Selected / Hovered Outer Ring
         if (isSelected) {
           ctx.beginPath();
           ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI, false);
           ctx.strokeStyle = '#ffffff';
           ctx.lineWidth = 1.5;
+          ctx.stroke();
+        } else if (isHovered) {
+          ctx.beginPath();
+          ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI, false);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.lineWidth = 1.2 / globalScale;
           ctx.stroke();
         }
 
@@ -179,8 +250,14 @@ export default function GraphCanvas({
         const textY = node.y + r + (4 / globalScale);
 
         // Draw backdrop pill for 100% legibility
-        ctx.fillStyle = 'rgba(18, 21, 31, 0.88)';
-        ctx.strokeStyle = isDisrupted ? 'rgba(239, 68, 68, 0.6)' : isSelected ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.1)';
+        ctx.fillStyle = isSelected ? 'rgba(30, 41, 59, 0.95)' : isHovered ? 'rgba(30, 41, 59, 0.92)' : 'rgba(18, 21, 31, 0.88)';
+        ctx.strokeStyle = isDisrupted 
+          ? 'rgba(239, 68, 68, 0.7)' 
+          : isSelected 
+            ? '#ffffff' 
+            : isHovered 
+              ? 'rgba(255, 255, 255, 0.4)' 
+              : 'rgba(255, 255, 255, 0.12)';
         ctx.lineWidth = 0.8 / globalScale;
         
         const pillX = node.x - textWidth / 2 - padX;
@@ -197,11 +274,51 @@ export default function GraphCanvas({
         // Draw Label Text
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillStyle = isDisrupted ? '#fca5a5' : isSelected ? '#ffffff' : '#f1f5f9';
+        ctx.fillStyle = isDisrupted ? '#fca5a5' : isSelected ? '#ffffff' : isHovered ? '#ffffff' : '#f1f5f9';
         ctx.fillText(label, node.x, textY);
+
+        // Reset globalAlpha
+        ctx.globalAlpha = 1.0;
       })
-      .onNodeClick(node => {
-        onSelectNode(node);
+      // Ensure both the node circle and label pill are clickable hit areas with generous hit testing
+      .nodePointerAreaPaint((node, color, ctx, globalScale) => {
+        const baseRadius = node.label === 'Product' ? 7.5 : node.label === 'Supplier' ? 6 : node.label === 'Region' ? 6.5 : 5;
+        const r = baseRadius * 1.35;
+        
+        ctx.fillStyle = color;
+        
+        // 1. Circle area
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, r + 4, 0, 2 * Math.PI, false);
+        ctx.fill();
+
+        // 2. Label pill area
+        const label = node.name || node.id;
+        const fontSize = Math.max(10 / globalScale, 3);
+        ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+        const textWidth = ctx.measureText(label).width;
+        const padX = 5 / globalScale;
+        const padY = 2.5 / globalScale;
+        const textY = node.y + r + (4 / globalScale);
+
+        const pillX = node.x - textWidth / 2 - padX;
+        const pillY = textY - padY;
+        const pillW = textWidth + padX * 2;
+        const pillH = fontSize + padY * 2;
+
+        ctx.beginPath();
+        ctx.rect(pillX, pillY, pillW, pillH);
+        ctx.fill();
+      })
+      .onNodeClick((node, event) => {
+        if (node && stateRef.current.onSelectNode) {
+          stateRef.current.onSelectNode(node);
+        }
+      })
+      .onBackgroundClick(() => {
+        if (!stateRef.current.hoverNode && stateRef.current.onSelectNode) {
+          stateRef.current.onSelectNode(null);
+        }
       })
       .onNodeHover(node => {
         setHoverNode(node || null);
@@ -238,7 +355,7 @@ export default function GraphCanvas({
     if (graphInstanceRef.current && filteredData.nodes.length > 0) {
       graphInstanceRef.current.graphData(filteredData);
       setTimeout(() => {
-        if (graphInstanceRef.current) {
+        if (graphInstanceRef.current && !selectedNode) {
           graphInstanceRef.current.zoomToFit(400, 40);
         }
       }, 300);
@@ -292,14 +409,14 @@ export default function GraphCanvas({
 
         {/* Filter Pills */}
         <div className="hud-filter-group">
-          {['ALL', 'Product', 'Component', 'Supplier', 'Facility', 'LogisticsHub'].map(lbl => (
+          {['ALL', 'Product', 'Component', 'Supplier', 'Facility', 'LogisticsHub', 'Region'].map(lbl => (
             <button
               key={lbl}
               className={`btn btn-sm ${filterLabel === lbl ? 'btn-primary' : ''}`}
               style={{ padding: '3px 8px', fontSize: '0.7rem', border: 'none' }}
               onClick={() => setFilterLabel(lbl)}
             >
-              {lbl === 'LogisticsHub' ? 'Hubs' : lbl}
+              {lbl === 'LogisticsHub' ? 'Hubs' : lbl === 'Region' ? 'Regions' : lbl}
             </button>
           ))}
         </div>
@@ -341,6 +458,10 @@ export default function GraphCanvas({
           <div className="legend-item" onClick={() => setFilterLabel('LogisticsHub')}>
             <div className="legend-dot" style={{ backgroundColor: NODE_PALETTE.LogisticsHub }} />
             <span>Port / Hub</span>
+          </div>
+          <div className="legend-item" onClick={() => setFilterLabel('Region')}>
+            <div className="legend-dot" style={{ backgroundColor: NODE_PALETTE.Region }} />
+            <span>Region</span>
           </div>
         </div>
       </div>

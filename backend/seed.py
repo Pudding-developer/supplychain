@@ -290,6 +290,30 @@ def run_seed():
             MATCH (f:Facility {id: 'fac_4'}), (p:LogisticsHub {id: 'port_3'}) CREATE (f)-[:SHIPS_VIA {transit_days: 1}]->(p)
         """)
 
+        # Regional Geographies (Ports & Suppliers LOCATED_IN Regions)
+        session.run("""
+            UNWIND $locs AS l
+            MATCH (src {id: l.source})
+            MATCH (reg:Region {id: l.target})
+            CREATE (src)-[:LOCATED_IN]->(reg)
+        """, locs=[
+            {"source": "port_4", "target": "reg_3"},
+            {"source": "sup_11", "target": "reg_3"},
+            {"source": "sup_17", "target": "reg_3"},
+            {"source": "sup_alt_1", "target": "reg_3"},
+            {"source": "sup_alt_2", "target": "reg_3"},
+
+            {"source": "port_1", "target": "reg_1"},
+            {"source": "port_2", "target": "reg_1"},
+            {"source": "sup_6", "target": "reg_1"},
+            {"source": "sup_8", "target": "reg_1"},
+            {"source": "sup_9", "target": "reg_1"},
+
+            {"source": "port_3", "target": "reg_2"},
+            {"source": "sup_1", "target": "reg_2"},
+            {"source": "sup_3", "target": "reg_2"}
+        ])
+
         session.run("""
             MATCH (p1:LogisticsHub {id: 'port_1'}), (p3:LogisticsHub {id: 'port_3'}) CREATE (p1)-[:ROUTES_TO {transit_days: 12}]->(p3)
         """)

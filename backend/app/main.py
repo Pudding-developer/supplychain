@@ -21,17 +21,25 @@ logger = logging.getLogger("chainpulse")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: attempt database connection
+    # Startup: attempt database connection in threadpool so ASGI startup is instant
     logger.info("Initializing ChainPulse Graph Application...")
-    connected = db_manager.connect()
-    if connected:
-        logger.info("Connected to CognoDB Cloud successfully.")
-    else:
-        logger.warning("Starting in Fallback Mock Mode. Database connection can be configured in .env.")
+    import asyncio
+    loop = asyncio.get_running_loop()
+    try:
+        connected = await loop.run_in_executor(None, db_manager.connect)
+        if connected:
+            logger.info("Connected to CognoDB Cloud successfully.")
+        else:
+            logger.warning("Starting in Fallback Mock Mode. Database connection can be configured in .env.")
+    except Exception as e:
+        logger.error(f"Error during async database init: {e}")
     yield
-    # Shutdown: close connection pool
+    # Shutdown: close connection pool in threadpool
     logger.info("Shutting down ChainPulse Graph Application...")
-    db_manager.close()
+    try:
+        await loop.run_in_executor(None, db_manager.close)
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
 app = FastAPI(
     title=settings.app_name,
